@@ -31,7 +31,6 @@ import java.io.Serializable;
  *     org.apache.flink.api.connector.sink2.Sink} interface instead.
  */
 @Deprecated
-@Public
 public interface SinkFunction<IN> extends Function, Serializable {
 
     /** @deprecated Use {@link #invoke(Object, Context)}. */

@@ -17,8 +17,6 @@
 
 package org.apache.flink.streaming.api.functions.source;
 
-import org.apache.flink.annotation.PublicEvolving;
-
 import java.util.Iterator;
 
 /**
@@ -29,7 +27,6 @@ import java.util.Iterator;
  *     removed. Use the new {@link org.apache.flink.api.connector.source.Source} API instead.
  */
 @Deprecated
-@PublicEvolving
 public class FromIteratorFunction<T> implements SourceFunction<T> {
 
     private static final long serialVersionUID = 1L;

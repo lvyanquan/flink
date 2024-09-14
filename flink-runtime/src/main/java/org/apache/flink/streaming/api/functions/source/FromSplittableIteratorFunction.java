@@ -17,7 +17,6 @@
 
 package org.apache.flink.streaming.api.functions.source;
 
-import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.util.SplittableIterator;
 
@@ -31,7 +30,6 @@ import java.util.Iterator;
  *     removed. Use the new {@link org.apache.flink.api.connector.source.Source} API instead.
  */
 @Deprecated
-@PublicEvolving
 public class FromSplittableIteratorFunction<T> extends RichParallelSourceFunction<T> {
 
     private static final long serialVersionUID = 1L;

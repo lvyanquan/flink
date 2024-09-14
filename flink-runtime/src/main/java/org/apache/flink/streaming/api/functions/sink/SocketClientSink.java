@@ -17,7 +17,6 @@
 
 package org.apache.flink.streaming.api.functions.sink;
 
-import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.serialization.SerializationSchema;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.util.SerializableObject;
@@ -46,7 +45,6 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  *     org.apache.flink.api.connector.sink2.Sink} interface instead.
  */
 @Deprecated
-@PublicEvolving
 public class SocketClientSink<IN> extends RichSinkFunction<IN> {
 
     private static final long serialVersionUID = 1L;

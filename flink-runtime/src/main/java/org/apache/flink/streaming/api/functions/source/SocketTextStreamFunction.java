@@ -17,7 +17,6 @@
 
 package org.apache.flink.streaming.api.functions.source;
 
-import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.util.IOUtils;
 
 import org.slf4j.Logger;
@@ -48,7 +47,6 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  *     removed. Use the new {@link org.apache.flink.api.connector.source.Source} API instead.
  */
 @Deprecated
-@PublicEvolving
 public class SocketTextStreamFunction implements SourceFunction<String> {
 
     private static final long serialVersionUID = 1L;

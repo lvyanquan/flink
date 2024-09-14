@@ -17,7 +17,6 @@
 
 package org.apache.flink.streaming.api.functions.sink;
 
-import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.SupportsConcurrentExecutionAttempts;
 import org.apache.flink.api.common.functions.util.PrintSinkOutputWriter;
 import org.apache.flink.configuration.Configuration;
@@ -37,7 +36,6 @@ import org.apache.flink.streaming.api.operators.StreamingRuntimeContext;
  *     interface instead.
  */
 @Deprecated
-@PublicEvolving
 public class PrintSinkFunction<IN> extends RichSinkFunction<IN>
         implements SupportsConcurrentExecutionAttempts {
 

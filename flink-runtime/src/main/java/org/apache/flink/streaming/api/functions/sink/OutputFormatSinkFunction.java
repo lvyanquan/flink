@@ -17,7 +17,6 @@
 
 package org.apache.flink.streaming.api.functions.sink;
 
-import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.common.io.CleanupWhenUnsuccessful;
@@ -41,7 +40,6 @@ import java.io.IOException;
  *     org.apache.flink.streaming.api.functions.sink.filesystem.StreamingFileSink StreamingFileSink}
  *     for writing to files from a streaming program.
  */
-@PublicEvolving
 @Deprecated
 public class OutputFormatSinkFunction<IN> extends RichSinkFunction<IN>
         implements InputTypeConfigurable {
