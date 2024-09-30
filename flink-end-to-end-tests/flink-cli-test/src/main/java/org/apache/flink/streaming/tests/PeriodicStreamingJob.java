@@ -33,10 +33,10 @@ import org.apache.flink.runtime.state.FunctionSnapshotContext;
 import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.source.SourceFunction;
+import org.apache.flink.streaming.api.functions.source.legacy.SourceFunction;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows;
-import org.apache.flink.streaming.api.windowing.time.Time;
 
+import java.time.Duration;
 import java.util.Collections;
 
 /**
@@ -68,7 +68,7 @@ public class PeriodicStreamingJob {
 
         DataStream<Tuple> result =
                 rows.keyBy(tuple -> tuple.getField(1))
-                        .window(TumblingProcessingTimeWindows.of(Time.seconds(5)))
+                        .window(TumblingProcessingTimeWindows.of(Duration.ofSeconds(5)))
                         .sum(0);
 
         result.writeAsText(outputPath + "/result.txt", FileSystem.WriteMode.OVERWRITE)
@@ -77,15 +77,8 @@ public class PeriodicStreamingJob {
         sEnv.execute();
     }
 
-    /**
-     * Data-generating source function.
-     *
-     * @deprecated This class is based on the {@link
-     *     org.apache.flink.streaming.api.functions.source.SourceFunction} API, which is due to be
-     *     removed. Use the new {@link org.apache.flink.api.connector.source.Source} API instead.
-     */
-    @Deprecated
-    public static class PeriodicSourceGenerator
+    /** Data-generating source function. */
+    static class PeriodicSourceGenerator
             implements SourceFunction<Tuple>, ResultTypeQueryable<Tuple>, CheckpointedFunction {
         private final int sleepMs;
         private final int durationMs;
