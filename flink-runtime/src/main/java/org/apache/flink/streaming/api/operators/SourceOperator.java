@@ -29,6 +29,8 @@ import org.apache.flink.api.connector.source.SourceEvent;
 import org.apache.flink.api.connector.source.SourceReader;
 import org.apache.flink.api.connector.source.SourceReaderContext;
 import org.apache.flink.api.connector.source.SourceSplit;
+import org.apache.flink.api.connector.source.util.ratelimit.RateLimitedSourceReader;
+import org.apache.flink.api.connector.source.util.ratelimit.RateLimiterStrategy;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.MetricOptions;
 import org.apache.flink.core.io.InputStatus;
@@ -205,6 +207,8 @@ public class SourceOperator<OUT, SplitT extends SourceSplit> extends AbstractStr
      */
     private transient PausableRelativeClock mainInputActivityClock;
 
+    private final RateLimiterStrategy rateLimiterStrategy;
+
     public SourceOperator(
             StreamOperatorParameters<OUT> parameters,
             FunctionWithException<SourceReaderContext, SourceReader<OUT, SplitT>, Exception>
@@ -216,7 +220,8 @@ public class SourceOperator<OUT, SplitT extends SourceSplit> extends AbstractStr
             Configuration configuration,
             String localHostname,
             boolean emitProgressiveWatermarks,
-            CanEmitBatchOfRecordsChecker canEmitBatchOfRecords) {
+            CanEmitBatchOfRecordsChecker canEmitBatchOfRecords,
+            RateLimiterStrategy rateLimiterStrategy) {
         super(parameters);
         this.readerFactory = checkNotNull(readerFactory);
         this.operatorEventGateway = checkNotNull(operatorEventGateway);
@@ -230,6 +235,7 @@ public class SourceOperator<OUT, SplitT extends SourceSplit> extends AbstractStr
         this.watermarkAlignmentParams = watermarkStrategy.getAlignmentParameters();
         this.allowUnalignedSourceSplits = configuration.get(ALLOW_UNALIGNED_SOURCE_SPLITS);
         this.canEmitBatchOfRecords = checkNotNull(canEmitBatchOfRecords);
+        this.rateLimiterStrategy = rateLimiterStrategy;
     }
 
     @Override
@@ -328,6 +334,12 @@ public class SourceOperator<OUT, SplitT extends SourceSplit> extends AbstractStr
                 };
 
         sourceReader = readerFactory.apply(context);
+        if (rateLimiterStrategy != null) {
+            sourceReader =
+                    new RateLimitedSourceReader<>(
+                            sourceReader,
+                            rateLimiterStrategy.createRateLimiter(context.currentParallelism()));
+        }
     }
 
     public InternalSourceReaderMetricGroup getSourceMetricGroup() {

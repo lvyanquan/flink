@@ -23,9 +23,6 @@ import org.apache.flink.api.connector.source.SourceReader;
 import org.apache.flink.api.connector.source.SourceReaderContext;
 import org.apache.flink.api.connector.source.SourceReaderFactory;
 import org.apache.flink.api.connector.source.lib.NumberSequenceSource;
-import org.apache.flink.api.connector.source.util.ratelimit.RateLimitedSourceReader;
-import org.apache.flink.api.connector.source.util.ratelimit.RateLimiter;
-import org.apache.flink.api.connector.source.util.ratelimit.RateLimiterStrategy;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -40,7 +37,6 @@ class GeneratorSourceReaderFactory<OUT>
         implements SourceReaderFactory<OUT, NumberSequenceSource.NumberSequenceSplit> {
 
     private final GeneratorFunction<Long, OUT> generatorFunction;
-    private final RateLimiterStrategy rateLimiterStrategy;
 
     /**
      * Instantiates a new {@code GeneratorSourceReaderFactory}.
@@ -48,20 +44,13 @@ class GeneratorSourceReaderFactory<OUT>
      * @param generatorFunction The generator function.
      * @param rateLimiterStrategy The rate limiter strategy.
      */
-    public GeneratorSourceReaderFactory(
-            GeneratorFunction<Long, OUT> generatorFunction,
-            RateLimiterStrategy rateLimiterStrategy) {
+    public GeneratorSourceReaderFactory(GeneratorFunction<Long, OUT> generatorFunction) {
         this.generatorFunction = checkNotNull(generatorFunction);
-        this.rateLimiterStrategy = checkNotNull(rateLimiterStrategy);
     }
 
     @Override
     public SourceReader<OUT, NumberSequenceSource.NumberSequenceSplit> createReader(
             SourceReaderContext readerContext) {
-        int parallelism = readerContext.currentParallelism();
-        RateLimiter rateLimiter = rateLimiterStrategy.createRateLimiter(parallelism);
-        return new RateLimitedSourceReader<>(
-                new GeneratingIteratorSourceReader<>(readerContext, generatorFunction),
-                rateLimiter);
+        return new GeneratingIteratorSourceReader<>(readerContext, generatorFunction);
     }
 }

@@ -32,6 +32,7 @@ import org.apache.flink.api.connector.source.SplitEnumeratorContext;
 import org.apache.flink.api.connector.source.lib.NumberSequenceSource;
 import org.apache.flink.api.connector.source.lib.NumberSequenceSource.NumberSequenceSplit;
 import org.apache.flink.api.connector.source.util.ratelimit.RateLimiterStrategy;
+import org.apache.flink.api.connector.source.util.ratelimit.SupportsRateLimiting;
 import org.apache.flink.api.java.ClosureCleaner;
 import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
 import org.apache.flink.core.io.SimpleVersionedSerializer;
@@ -95,7 +96,8 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 public class DataGeneratorSource<OUT>
         implements Source<OUT, NumberSequenceSplit, Collection<NumberSequenceSplit>>,
                 ResultTypeQueryable<OUT>,
-                OutputTypeConfigurable<OUT> {
+                OutputTypeConfigurable<OUT>,
+                SupportsRateLimiting {
 
     private static final long serialVersionUID = 1L;
 
@@ -105,6 +107,8 @@ public class DataGeneratorSource<OUT>
     private final NumberSequenceSource numberSource;
 
     private final GeneratorFunction<Long, OUT> generatorFunction;
+
+    private RateLimiterStrategy rateLimiterStrategy;
 
     /**
      * Instantiates a new {@code DataGeneratorSource}.
@@ -134,10 +138,11 @@ public class DataGeneratorSource<OUT>
             RateLimiterStrategy rateLimiterStrategy,
             TypeInformation<OUT> typeInfo) {
         this(
-                new GeneratorSourceReaderFactory<>(generatorFunction, rateLimiterStrategy),
+                new GeneratorSourceReaderFactory<>(generatorFunction),
                 generatorFunction,
                 count,
                 typeInfo);
+        this.rateLimiterStrategy = rateLimiterStrategy;
         ClosureCleaner.clean(
                 rateLimiterStrategy, ExecutionConfig.ClosureCleanerLevel.RECURSIVE, true);
     }
@@ -215,5 +220,10 @@ public class DataGeneratorSource<OUT>
     public SimpleVersionedSerializer<Collection<NumberSequenceSplit>>
             getEnumeratorCheckpointSerializer() {
         return numberSource.getEnumeratorCheckpointSerializer();
+    }
+
+    @Override
+    public RateLimiterStrategy rateLimiterStrategy() {
+        return rateLimiterStrategy;
     }
 }

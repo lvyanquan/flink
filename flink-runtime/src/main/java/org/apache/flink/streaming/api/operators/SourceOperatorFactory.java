@@ -26,6 +26,8 @@ import org.apache.flink.api.connector.source.Source;
 import org.apache.flink.api.connector.source.SourceReader;
 import org.apache.flink.api.connector.source.SourceReaderContext;
 import org.apache.flink.api.connector.source.SourceSplit;
+import org.apache.flink.api.connector.source.util.ratelimit.RateLimiterStrategy;
+import org.apache.flink.api.connector.source.util.ratelimit.SupportsRateLimiting;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.io.SimpleVersionedSerializer;
 import org.apache.flink.runtime.jobgraph.OperatorID;
@@ -98,7 +100,10 @@ public class SourceOperatorFactory<OUT> extends AbstractStreamOperatorFactory<OU
         final OperatorID operatorId = parameters.getStreamConfig().getOperatorID();
         final OperatorEventGateway gateway =
                 parameters.getOperatorEventDispatcher().getOperatorEventGateway(operatorId);
-
+        RateLimiterStrategy rateLimiterStrategy = null;
+        if (source instanceof SupportsRateLimiting) {
+            rateLimiterStrategy = ((SupportsRateLimiting) source).rateLimiterStrategy();
+        }
         final SourceOperator<OUT, ?> sourceOperator =
                 instantiateSourceOperator(
                         parameters,
@@ -118,7 +123,8 @@ public class SourceOperatorFactory<OUT> extends AbstractStreamOperatorFactory<OU
                                 .getTaskManagerInfo()
                                 .getTaskManagerExternalAddress(),
                         emitProgressiveWatermarks,
-                        parameters.getContainingTask().getCanEmitBatchOfRecords());
+                        parameters.getContainingTask().getCanEmitBatchOfRecords(),
+                        rateLimiterStrategy);
 
         parameters.getOperatorEventDispatcher().registerEventHandler(operatorId, sourceOperator);
 
@@ -184,7 +190,8 @@ public class SourceOperatorFactory<OUT> extends AbstractStreamOperatorFactory<OU
                     Configuration config,
                     String localHostName,
                     boolean emitProgressiveWatermarks,
-                    CanEmitBatchOfRecordsChecker canEmitBatchOfRecords) {
+                    CanEmitBatchOfRecordsChecker canEmitBatchOfRecords,
+                    RateLimiterStrategy rateLimiterStrategy) {
 
         // jumping through generics hoops: cast the generics away to then cast them back more
         // strictly typed
@@ -207,6 +214,7 @@ public class SourceOperatorFactory<OUT> extends AbstractStreamOperatorFactory<OU
                 config,
                 localHostName,
                 emitProgressiveWatermarks,
-                canEmitBatchOfRecords);
+                canEmitBatchOfRecords,
+                rateLimiterStrategy);
     }
 }

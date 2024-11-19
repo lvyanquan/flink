@@ -39,7 +39,7 @@ public class DataGenerator {
                 new DataGeneratorSource<>(
                         generatorFunction,
                         Long.MAX_VALUE,
-                        RateLimiterStrategy.perSecond(100),
+                        RateLimiterStrategy.perSecond(5),
                         Types.STRING);
 
         DataStreamSource<String> streamSource =
