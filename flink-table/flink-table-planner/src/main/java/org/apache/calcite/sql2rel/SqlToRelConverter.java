@@ -36,7 +36,6 @@ import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.linq4j.Ord;
 import org.apache.calcite.linq4j.tree.TableExpressionFactory;
 import org.apache.calcite.plan.RelOptCluster;
-import org.apache.calcite.plan.RelOptPlanner;
 import org.apache.calcite.plan.RelOptSamplingParameters;
 import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.plan.RelOptUtil;
@@ -271,9 +270,6 @@ public class SqlToRelConverter {
     /** Size of the smallest IN list that will be converted to a semijoin to a static table. */
     public static final int DEFAULT_IN_SUB_QUERY_THRESHOLD = 20;
 
-    @Deprecated // to be removed before 2.0
-    public static final int DEFAULT_IN_SUBQUERY_THRESHOLD = DEFAULT_IN_SUB_QUERY_THRESHOLD;
-
     // ~ Instance fields --------------------------------------------------------
 
     public final @Nullable SqlValidator validator;
@@ -309,48 +305,6 @@ public class SqlToRelConverter {
     public final RelOptTable.ViewExpander viewExpander;
 
     // ~ Constructors -----------------------------------------------------------
-    /**
-     * Creates a converter.
-     *
-     * @param viewExpander Preparing statement
-     * @param validator Validator
-     * @param catalogReader Schema
-     * @param planner Planner
-     * @param rexBuilder Rex builder
-     * @param convertletTable Expression converter
-     */
-    @Deprecated // to be removed before 2.0
-    public SqlToRelConverter(
-            RelOptTable.ViewExpander viewExpander,
-            SqlValidator validator,
-            Prepare.CatalogReader catalogReader,
-            RelOptPlanner planner,
-            RexBuilder rexBuilder,
-            SqlRexConvertletTable convertletTable) {
-        this(
-                viewExpander,
-                validator,
-                catalogReader,
-                RelOptCluster.create(planner, rexBuilder),
-                convertletTable,
-                SqlToRelConverter.config());
-    }
-
-    @Deprecated // to be removed before 2.0
-    public SqlToRelConverter(
-            RelOptTable.ViewExpander viewExpander,
-            SqlValidator validator,
-            Prepare.CatalogReader catalogReader,
-            RelOptCluster cluster,
-            SqlRexConvertletTable convertletTable) {
-        this(
-                viewExpander,
-                validator,
-                catalogReader,
-                cluster,
-                convertletTable,
-                SqlToRelConverter.config());
-    }
 
     /* Creates a converter. */
     public SqlToRelConverter(
@@ -1872,20 +1826,6 @@ public class SqlToRelConverter {
             return node;
         }
         return rexBuilder.ensureType(type, node, true);
-    }
-
-    /**
-     * Gets the list size threshold under which {@link #convertInToOr} is used. Lists of this size
-     * or greater will instead be converted to use a join against an inline table ({@link
-     * org.apache.calcite.rel.logical.LogicalValues}) rather than a predicate. A threshold of 0
-     * forces usage of an inline table in all cases; a threshold of Integer.MAX_VALUE forces usage
-     * of OR in all cases
-     *
-     * @return threshold, default {@link #DEFAULT_IN_SUB_QUERY_THRESHOLD}
-     */
-    @Deprecated // to be removed before 2.0
-    protected int getInSubqueryThreshold() {
-        return config.getInSubQueryThreshold();
     }
 
     /**
@@ -3877,25 +3817,8 @@ public class SqlToRelConverter {
         }
     }
 
-    @Deprecated // to be removed before 2.0
-    protected boolean enableDecorrelation() {
-        // disable sub-query decorrelation when needed.
-        // e.g. if outer joins are not supported.
-        return config.isDecorrelationEnabled();
-    }
-
     protected RelNode decorrelateQuery(RelNode rootRel) {
         return RelDecorrelator.decorrelateQuery(rootRel, relBuilder);
-    }
-
-    /**
-     * Returns whether to trim unused fields as part of the conversion process.
-     *
-     * @return Whether to trim unused fields
-     */
-    @Deprecated // to be removed before 2.0
-    public boolean isTrimUnusedFields() {
-        return config.isTrimUnusedFields();
     }
 
     /**
@@ -5588,19 +5511,6 @@ public class SqlToRelConverter {
             // Apply standard conversions.
             rex = expr.accept(this);
             return requireNonNull(rex, "rex");
-        }
-
-        /**
-         * Converts an item in an ORDER BY clause inside a window (OVER) clause, extracting DESC,
-         * NULLS LAST and NULLS FIRST flags first.
-         */
-        @Deprecated // to be removed before 2.0
-        public RexFieldCollation convertSortExpression(
-                SqlNode expr,
-                RelFieldCollation.Direction direction,
-                RelFieldCollation.NullDirection nullDirection) {
-            return convertSortExpression(
-                    expr, direction, nullDirection, this::sortToRexFieldCollation);
         }
 
         /**

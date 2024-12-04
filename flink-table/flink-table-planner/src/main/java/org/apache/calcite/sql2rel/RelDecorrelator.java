@@ -53,7 +53,6 @@ import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.Values;
 import org.apache.calcite.rel.logical.LogicalAggregate;
@@ -176,13 +175,6 @@ public class RelDecorrelator implements ReflectiveVisitor {
     }
 
     // ~ Methods ----------------------------------------------------------------
-
-    @Deprecated // to be removed before 2.0
-    public static RelNode decorrelateQuery(RelNode rootRel) {
-        final RelBuilder relBuilder =
-                RelFactories.LOGICAL_BUILDER.create(rootRel.getCluster(), null);
-        return decorrelateQuery(rootRel, relBuilder);
-    }
 
     /**
      * Decorrelates a query.

@@ -1288,19 +1288,6 @@ public class RelBuilder {
     }
 
     // CHECKSTYLE: IGNORE 1
-    /**
-     * @deprecated Now that indicator is deprecated, use {@link #groupKey(Iterable, Iterable)},
-     *     which has the same behavior as calling this method with {@code indicator = false}.
-     */
-    @Deprecated // to be removed before 2.0
-    public GroupKey groupKey(
-            Iterable<? extends RexNode> nodes,
-            boolean indicator,
-            Iterable<? extends Iterable<? extends RexNode>> nodeLists) {
-        Aggregate.checkIndicator(indicator);
-        return groupKey_(nodes, nodeLists);
-    }
-
     private static GroupKey groupKey_(
             Iterable<? extends RexNode> nodes,
             Iterable<? extends Iterable<? extends RexNode>> nodeLists) {
@@ -1363,17 +1350,6 @@ public class RelBuilder {
     }
 
     // CHECKSTYLE: IGNORE 1
-    /** @deprecated Use {@link #groupKey(ImmutableBitSet, Iterable)}. */
-    @Deprecated // to be removed before 2.0
-    public GroupKey groupKey(
-            ImmutableBitSet groupSet,
-            boolean indicator,
-            @Nullable ImmutableList<ImmutableBitSet> groupSets) {
-        Aggregate.checkIndicator(indicator);
-        return groupKey_(
-                groupSet,
-                groupSets == null ? ImmutableList.of(groupSet) : ImmutableList.copyOf(groupSets));
-    }
 
     private GroupKey groupKey_(ImmutableBitSet groupSet, ImmutableList<ImmutableBitSet> groupSets) {
         if (groupSet.length() > peek().getRowType().getFieldCount()) {
@@ -1382,84 +1358,6 @@ public class RelBuilder {
         requireNonNull(groupSets, "groupSets");
         final ImmutableList<RexNode> nodes = fields(groupSet);
         return groupKey_(nodes, Util.transform(groupSets, this::fields));
-    }
-
-    @Deprecated // to be removed before 2.0
-    public AggCall aggregateCall(
-            SqlAggFunction aggFunction,
-            boolean distinct,
-            RexNode filter,
-            @Nullable String alias,
-            RexNode... operands) {
-        return aggregateCall(
-                aggFunction,
-                distinct,
-                false,
-                false,
-                filter,
-                null,
-                ImmutableList.of(),
-                alias,
-                ImmutableList.copyOf(operands));
-    }
-
-    @Deprecated // to be removed before 2.0
-    public AggCall aggregateCall(
-            SqlAggFunction aggFunction,
-            boolean distinct,
-            boolean approximate,
-            RexNode filter,
-            @Nullable String alias,
-            RexNode... operands) {
-        return aggregateCall(
-                aggFunction,
-                distinct,
-                approximate,
-                false,
-                filter,
-                null,
-                ImmutableList.of(),
-                alias,
-                ImmutableList.copyOf(operands));
-    }
-
-    @Deprecated // to be removed before 2.0
-    public AggCall aggregateCall(
-            SqlAggFunction aggFunction,
-            boolean distinct,
-            RexNode filter,
-            @Nullable String alias,
-            Iterable<? extends RexNode> operands) {
-        return aggregateCall(
-                aggFunction,
-                distinct,
-                false,
-                false,
-                filter,
-                null,
-                ImmutableList.of(),
-                alias,
-                ImmutableList.copyOf(operands));
-    }
-
-    @Deprecated // to be removed before 2.0
-    public AggCall aggregateCall(
-            SqlAggFunction aggFunction,
-            boolean distinct,
-            boolean approximate,
-            RexNode filter,
-            @Nullable String alias,
-            Iterable<? extends RexNode> operands) {
-        return aggregateCall(
-                aggFunction,
-                distinct,
-                approximate,
-                false,
-                filter,
-                null,
-                ImmutableList.of(),
-                alias,
-                ImmutableList.copyOf(operands));
     }
 
     /**

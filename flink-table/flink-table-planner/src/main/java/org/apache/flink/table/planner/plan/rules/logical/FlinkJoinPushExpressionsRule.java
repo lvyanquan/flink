@@ -24,7 +24,6 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.RelBuilderFactory;
 
 /**
@@ -50,12 +49,6 @@ public class FlinkJoinPushExpressionsRule extends RelOptRule {
     public FlinkJoinPushExpressionsRule(
             Class<? extends Join> clazz, RelBuilderFactory relBuilderFactory) {
         super(operand(clazz, any()), relBuilderFactory, null);
-    }
-
-    @Deprecated // to be removed before 2.0
-    public FlinkJoinPushExpressionsRule(
-            Class<? extends Join> clazz, RelFactories.ProjectFactory projectFactory) {
-        this(clazz, RelBuilder.proto(projectFactory));
     }
 
     @Override

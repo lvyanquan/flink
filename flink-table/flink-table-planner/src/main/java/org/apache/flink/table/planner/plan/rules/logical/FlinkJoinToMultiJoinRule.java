@@ -39,7 +39,6 @@ import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.rex.RexVisitorImpl;
-import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.calcite.util.ImmutableIntList;
 import org.apache.calcite.util.Pair;
@@ -108,21 +107,6 @@ public class FlinkJoinToMultiJoinRule extends RelRule<FlinkJoinToMultiJoinRule.C
     /** Creates a JoinToMultiJoinRule. */
     public FlinkJoinToMultiJoinRule(Config config) {
         super(config);
-    }
-
-    @Deprecated // to be removed before 2.0
-    public FlinkJoinToMultiJoinRule(Class<? extends Join> clazz) {
-        this(Config.DEFAULT.withOperandFor(clazz));
-    }
-
-    @Deprecated // to be removed before 2.0
-    public FlinkJoinToMultiJoinRule(
-            Class<? extends Join> joinClass, RelBuilderFactory relBuilderFactory) {
-        this(
-                Config.DEFAULT
-                        .withRelBuilderFactory(relBuilderFactory)
-                        .as(Config.class)
-                        .withOperandFor(joinClass));
     }
 
     // ~ Methods ----------------------------------------------------------------

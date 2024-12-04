@@ -23,7 +23,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
 import org.apache.calcite.DataContexts;
 import org.apache.calcite.linq4j.function.Predicate1;
-import org.apache.calcite.plan.RelOptPredicateList;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelCollations;
@@ -65,7 +64,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Predicate;
 
 import static java.util.Objects.requireNonNull;
 
@@ -1182,14 +1180,6 @@ public class RexUtil {
         return builder.build();
     }
 
-    @Deprecated // to be removed before 2.0
-    public static RelDataType createStructType(
-            RelDataTypeFactory typeFactory,
-            final List<? extends RexNode> exprs,
-            List<String> names) {
-        return createStructType(typeFactory, exprs, names, null);
-    }
-
     /**
      * Returns whether the type of an array of expressions is compatible with a struct type.
      *
@@ -1876,13 +1866,6 @@ public class RexUtil {
         return new CnfHelper(rexBuilder, -1).pull(node);
     }
 
-    @Deprecated // to be removed before 2.0
-    public static List<RexNode> fixUp(
-            final RexBuilder rexBuilder, List<RexNode> nodes, final RelDataType rowType) {
-        final List<RelDataType> typeList = RelOptUtil.getFieldTypeList(rowType);
-        return fixUp(rexBuilder, nodes, typeList);
-    }
-
     /**
      * Fixes up the type of all {@link RexInputRef}s in an expression to match differences in
      * nullability.
@@ -1931,76 +1914,6 @@ public class RexUtil {
     @Deprecated // use e1.equals(e2)
     public static boolean eq(RexNode e1, RexNode e2) {
         return e1 == e2 || e1.toString().equals(e2.toString());
-    }
-
-    /**
-     * Simplifies a boolean expression, always preserving its type and its nullability.
-     *
-     * <p>This is useful if you are simplifying expressions in a {@link Project}.
-     *
-     * @deprecated Use {@link RexSimplify#simplifyPreservingType(RexNode)}, which allows you to
-     *     specify an {@link RexExecutor}.
-     */
-    @Deprecated // to be removed before 2.0
-    public static RexNode simplifyPreservingType(RexBuilder rexBuilder, RexNode e) {
-        return new RexSimplify(rexBuilder, RelOptPredicateList.EMPTY, EXECUTOR)
-                .simplifyPreservingType(e);
-    }
-
-    /**
-     * Simplifies a boolean expression, leaving UNKNOWN values as UNKNOWN, and using the default
-     * executor.
-     *
-     * @deprecated Create a {@link RexSimplify}, then call its {@link RexSimplify#simplify(RexNode,
-     *     RexUnknownAs)} method.
-     */
-    @Deprecated // to be removed before 2.0
-    public static RexNode simplify(RexBuilder rexBuilder, RexNode e) {
-        return new RexSimplify(rexBuilder, RelOptPredicateList.EMPTY, EXECUTOR).simplify(e);
-    }
-
-    /**
-     * Simplifies a boolean expression, using the default executor.
-     *
-     * <p>In particular:
-     *
-     * <ul>
-     *   <li>{@code simplify(x = 1 AND y = 2 AND NOT x = 1)} returns {@code y = 2}
-     *   <li>{@code simplify(x = 1 AND FALSE)} returns {@code FALSE}
-     * </ul>
-     *
-     * <p>If the expression is a predicate in a WHERE clause, UNKNOWN values have the same effect as
-     * FALSE. In situations like this, specify {@code unknownAsFalse = true}, so and we can switch
-     * from 3-valued logic to simpler 2-valued logic and make more optimizations.
-     *
-     * @param rexBuilder Rex builder
-     * @param e Expression to simplify
-     * @param unknownAsFalse Whether to convert UNKNOWN values to FALSE
-     * @deprecated Create a {@link RexSimplify}, then call its {@link RexSimplify#simplify(RexNode,
-     *     RexUnknownAs)} method.
-     */
-    @Deprecated // to be removed before 2.0
-    public static RexNode simplify(RexBuilder rexBuilder, RexNode e, boolean unknownAsFalse) {
-        return new RexSimplify(rexBuilder, RelOptPredicateList.EMPTY, EXECUTOR)
-                .simplifyUnknownAs(e, RexUnknownAs.falseIf(unknownAsFalse));
-    }
-
-    /**
-     * Simplifies a conjunction of boolean expressions.
-     *
-     * @deprecated Use {@link RexSimplify#simplifyAnds(Iterable, RexUnknownAs)}.
-     */
-    @Deprecated // to be removed before 2.0
-    public static RexNode simplifyAnds(RexBuilder rexBuilder, Iterable<? extends RexNode> nodes) {
-        return new RexSimplify(rexBuilder, RelOptPredicateList.EMPTY, EXECUTOR)
-                .simplifyAnds(nodes, RexUnknownAs.UNKNOWN);
-    }
-
-    @Deprecated // to be removed before 2.0
-    public static RexNode simplifyAnds(
-            RexBuilder rexBuilder, Iterable<? extends RexNode> nodes, boolean unknownAsFalse) {
-        return new RexSimplify(rexBuilder, RelOptPredicateList.EMPTY, EXECUTOR)
-                .simplifyAnds(nodes, RexUnknownAs.falseIf(unknownAsFalse));
     }
 
     /** Negates a logical expression by adding or removing a NOT. */
@@ -2061,26 +1974,6 @@ public class RexUtil {
         }
     }
 
-    @Deprecated // to be removed before 2.0
-    public static RexNode simplifyAnd(RexBuilder rexBuilder, RexCall e, boolean unknownAsFalse) {
-        return new RexSimplify(rexBuilder, RelOptPredicateList.EMPTY, EXECUTOR)
-                .simplifyAnd(e, RexUnknownAs.falseIf(unknownAsFalse));
-    }
-
-    @Deprecated // to be removed before 2.0
-    public static RexNode simplifyAnd2(
-            RexBuilder rexBuilder, List<RexNode> terms, List<RexNode> notTerms) {
-        return new RexSimplify(rexBuilder, RelOptPredicateList.EMPTY, EXECUTOR)
-                .simplifyAnd2(terms, notTerms);
-    }
-
-    @Deprecated // to be removed before 2.0
-    public static RexNode simplifyAnd2ForUnknownAsFalse(
-            RexBuilder rexBuilder, List<RexNode> terms, List<RexNode> notTerms) {
-        return new RexSimplify(rexBuilder, RelOptPredicateList.EMPTY, EXECUTOR)
-                .simplifyAnd2ForUnknownAsFalse(terms, notTerms);
-    }
-
     public static @Nullable RexNode negate(RexBuilder rexBuilder, RexCall call) {
         switch (call.getKind()) {
             case EQUALS:
@@ -2110,19 +2003,6 @@ public class RexUtil {
             default:
                 return null;
         }
-    }
-
-    @Deprecated // to be removed before 2.0
-    public static RexNode simplifyOr(RexBuilder rexBuilder, RexCall call) {
-        return new RexSimplify(rexBuilder, RelOptPredicateList.EMPTY, EXECUTOR)
-                .simplifyUnknownAs(call, RexUnknownAs.UNKNOWN);
-    }
-
-    @Deprecated // to be removed before 2.0
-    public static RexNode simplifyOrs(RexBuilder rexBuilder, List<RexNode> terms) {
-        return new RexSimplify(rexBuilder, RelOptPredicateList.EMPTY, EXECUTOR)
-                .simplifyUnknownAs(
-                        RexUtil.composeDisjunction(rexBuilder, terms), RexUnknownAs.UNKNOWN);
     }
 
     /** Creates the expression {@code e1 AND NOT notTerm1 AND NOT notTerm2 ...}. */
@@ -2215,18 +2095,6 @@ public class RexUtil {
             }
         }
         return false;
-    }
-
-    /**
-     * Returns a function that applies NOT to its argument.
-     *
-     * @deprecated Use {@link #not}
-     */
-    @SuppressWarnings("Guava")
-    @Deprecated // to be removed before 2.0
-    public static com.google.common.base.Function<RexNode, RexNode> notFn(
-            final RexBuilder rexBuilder) {
-        return e -> not(rexBuilder, e);
     }
 
     /**
@@ -2856,20 +2724,6 @@ public class RexUtil {
     public static class SubQueryFinder extends RexVisitorImpl<Void> {
         public static final SubQueryFinder INSTANCE = new SubQueryFinder();
 
-        @SuppressWarnings("Guava")
-        @Deprecated // to be removed before 2.0
-        public static final com.google.common.base.Predicate<Project> PROJECT_PREDICATE =
-                SubQueryFinder::containsSubQuery;
-
-        @SuppressWarnings("Guava")
-        @Deprecated // to be removed before 2.0
-        public static final Predicate<Filter> FILTER_PREDICATE = SubQueryFinder::containsSubQuery;
-
-        @SuppressWarnings("Guava")
-        @Deprecated // to be removed before 2.0
-        public static final com.google.common.base.Predicate<Join> JOIN_PREDICATE =
-                SubQueryFinder::containsSubQuery;
-
         private SubQueryFinder() {
             super(true);
         }
@@ -2929,67 +2783,6 @@ public class RexUtil {
             } catch (Util.FoundOne e) {
                 return (RexSubQuery) e.getNode();
             }
-        }
-    }
-
-    /**
-     * Deep expressions simplifier.
-     *
-     * <p>This class is broken because it does not change the value of {@link RexUnknownAs} as it
-     * recurses into an expression. Do not use.
-     */
-    @Deprecated // to be removed before 2.0
-    public static class ExprSimplifier extends RexShuttle {
-        private final RexSimplify simplify;
-        private final Map<RexNode, RexUnknownAs> unknownAsMap = new HashMap<>();
-        private final RexUnknownAs unknownAs;
-        private final boolean matchNullability;
-
-        public ExprSimplifier(RexSimplify simplify) {
-            this(simplify, RexUnknownAs.UNKNOWN, true);
-        }
-
-        public ExprSimplifier(RexSimplify simplify, boolean matchNullability) {
-            this(simplify, RexUnknownAs.UNKNOWN, matchNullability);
-        }
-
-        public ExprSimplifier(
-                RexSimplify simplify, RexUnknownAs unknownAs, boolean matchNullability) {
-            this.simplify = simplify;
-            this.unknownAs = unknownAs;
-            this.matchNullability = matchNullability;
-        }
-
-        @Override
-        public RexNode visitCall(RexCall call) {
-            RexUnknownAs unknownAs = this.unknownAs;
-            switch (unknownAs) {
-                case FALSE:
-                    switch (call.getKind()) {
-                        case AND:
-                        case CASE:
-                            // Default value is used for top operator
-                            unknownAs = unknownAsMap.getOrDefault(call, RexUnknownAs.FALSE);
-                            break;
-                        default:
-                            unknownAs = RexUnknownAs.FALSE;
-                    }
-                    for (RexNode operand : call.operands) {
-                        this.unknownAsMap.put(operand, unknownAs);
-                    }
-                    break;
-                default:
-                    break;
-            }
-            RexNode node = super.visitCall(call);
-            RexNode simplifiedNode = simplify.simplify(node, unknownAs);
-            if (node == simplifiedNode) {
-                return node;
-            }
-            if (simplifiedNode.getType().equals(call.getType())) {
-                return simplifiedNode;
-            }
-            return simplify.rexBuilder.makeCast(call.getType(), simplifiedNode, matchNullability);
         }
     }
 

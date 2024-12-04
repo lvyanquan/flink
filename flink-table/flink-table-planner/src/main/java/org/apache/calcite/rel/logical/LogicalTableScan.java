@@ -76,16 +76,6 @@ public final class LogicalTableScan extends TableScan {
         super(cluster, traitSet, hints, table);
     }
 
-    @Deprecated // to be removed before 2.0
-    public LogicalTableScan(RelOptCluster cluster, RelTraitSet traitSet, RelOptTable table) {
-        this(cluster, traitSet, ImmutableList.of(), table);
-    }
-
-    @Deprecated // to be removed before 2.0
-    public LogicalTableScan(RelOptCluster cluster, RelOptTable table) {
-        this(cluster, cluster.traitSetOf(Convention.NONE), ImmutableList.of(), table);
-    }
-
     /** Creates a LogicalTableScan by parsing serialized output. */
     public LogicalTableScan(RelInput input) {
         super(input);
