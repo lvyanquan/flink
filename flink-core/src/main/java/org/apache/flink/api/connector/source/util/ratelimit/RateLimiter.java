@@ -33,8 +33,10 @@ public interface RateLimiter {
      * Returns a future that is completed once another event would not exceed the rate limit. For
      * correct functioning, the next invocation of this method should only happen after the
      * previously returned future has been completed.
+     *
+     * @param requestSize The number of records that will be emitted.
      */
-    CompletionStage<Void> acquire();
+    CompletionStage<Void> acquire(int requestSize);
 
     /**
      * Notifies this {@code RateLimiter} that the checkpoint with the given {@code checkpointId}

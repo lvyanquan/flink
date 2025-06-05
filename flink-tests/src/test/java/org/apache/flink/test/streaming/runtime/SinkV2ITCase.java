@@ -343,8 +343,8 @@ public class SinkV2ITCase extends AbstractTestBase {
         }
 
         @Override
-        public CompletionStage<Void> acquire() {
-            CompletionStage<Void> stage = rateLimiter.acquire();
+        public CompletionStage<Void> acquire(int requestSize) {
+            CompletionStage<Void> stage = rateLimiter.acquire(requestSize);
             cooldown = numCheckpointCooldown;
             return stage;
         }

@@ -26,6 +26,8 @@ import org.apache.flink.api.connector.source.SourceOutput;
 import org.apache.flink.api.connector.source.SourceReader;
 import org.apache.flink.api.connector.source.SourceReaderContext;
 import org.apache.flink.api.connector.source.SourceSplit;
+import org.apache.flink.api.connector.source.util.ratelimit.RateLimiter;
+import org.apache.flink.api.connector.source.util.ratelimit.RateLimiterStrategy;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.base.source.reader.fetcher.SplitFetcherManager;
 import org.apache.flink.connector.base.source.reader.splitreader.SplitReader;
@@ -47,6 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 
 import static org.apache.flink.util.Preconditions.checkState;
@@ -107,6 +110,11 @@ public abstract class SourceReaderBase<E, T, SplitT extends SourceSplit, SplitSt
 
     @Nullable protected final RecordEvaluator<T> eofRecordEvaluator;
 
+    @Nullable private RateLimiter rateLimiter;
+
+    /** Future that tracks the rate limiter's current state. */
+    @Nullable private CompletionStage<Void> rateLimitFuture;
+
     /**
      * The primary constructor for the source reader.
      *
@@ -127,6 +135,25 @@ public abstract class SourceReaderBase<E, T, SplitT extends SourceSplit, SplitSt
             @Nullable RecordEvaluator<T> eofRecordEvaluator,
             Configuration config,
             SourceReaderContext context) {
+        this(splitFetcherManager, recordEmitter, eofRecordEvaluator, config, context, null);
+    }
+
+    public SourceReaderBase(
+            SplitFetcherManager<E, SplitT> splitFetcherManager,
+            RecordEmitter<E, T, SplitStateT> recordEmitter,
+            Configuration config,
+            SourceReaderContext context,
+            @Nullable RateLimiterStrategy rateLimiterStrategy) {
+        this(splitFetcherManager, recordEmitter, null, config, context, rateLimiterStrategy);
+    }
+
+    public SourceReaderBase(
+            SplitFetcherManager<E, SplitT> splitFetcherManager,
+            RecordEmitter<E, T, SplitStateT> recordEmitter,
+            @Nullable RecordEvaluator<T> eofRecordEvaluator,
+            Configuration config,
+            SourceReaderContext context,
+            @Nullable RateLimiterStrategy rateLimiterStrategy) {
         this.elementsQueue = splitFetcherManager.getQueue();
         this.splitFetcherManager = splitFetcherManager;
         this.recordEmitter = recordEmitter;
@@ -136,7 +163,9 @@ public abstract class SourceReaderBase<E, T, SplitT extends SourceSplit, SplitSt
         this.context = context;
         this.noMoreSplitsAssignment = false;
         this.eofRecordEvaluator = eofRecordEvaluator;
-
+        if (rateLimiterStrategy != null) {
+            rateLimiter = rateLimiterStrategy.createRateLimiter(context.currentParallelism());
+        }
         numRecordsInCounter = context.metricGroup().getIOMetricGroup().getNumRecordsInCounter();
     }
 
@@ -156,12 +185,24 @@ public abstract class SourceReaderBase<E, T, SplitT extends SourceSplit, SplitSt
 
         // we need to loop here, because we may have to go across splits
         while (true) {
+            // check if the previous record count reached the limit of ratelimiter.
+            if (rateLimitFuture != null && !rateLimitFuture.toCompletableFuture().isDone()) {
+                return trace(InputStatus.MORE_AVAILABLE);
+            }
             // Process one record.
             final E record = recordsWithSplitId.nextRecordFromSplit();
             if (record != null) {
                 // emit the record.
                 numRecordsInCounter.inc(1);
                 recordEmitter.emitRecord(record, currentSplitOutput, currentSplitContext.state);
+                // Acquire permit from rateLimiter.
+                if (rateLimiter != null) {
+                    RateLimitedSourceOutputWrapper<T> rateLimitedSourceOutputWrapper =
+                            (RateLimitedSourceOutputWrapper<T>) currentSplitOutput;
+                    rateLimitFuture =
+                            rateLimiter.acquire(rateLimitedSourceOutputWrapper.getRecordCount());
+                    rateLimitedSourceOutputWrapper.resetRecordCount();
+                }
                 LOG.trace("Emitted record: {}", record);
 
                 // We always emit MORE_AVAILABLE here, even though we do not strictly know whether
@@ -260,7 +301,13 @@ public abstract class SourceReaderBase<E, T, SplitT extends SourceSplit, SplitSt
     @Override
     public List<SplitT> snapshotState(long checkpointId) {
         List<SplitT> splits = new ArrayList<>();
-        splitStates.forEach((id, context) -> splits.add(toSplitType(id, context.state)));
+        splitStates.forEach(
+                (id, context) -> {
+                    splits.add(toSplitType(id, context.state));
+                    if (context.rateLimiter != null) {
+                        context.rateLimiter.notifyCheckpointComplete(checkpointId);
+                    }
+                });
         return splits;
     }
 
@@ -271,7 +318,8 @@ public abstract class SourceReaderBase<E, T, SplitT extends SourceSplit, SplitSt
         splits.forEach(
                 s ->
                         splitStates.put(
-                                s.splitId(), new SplitContext<>(s.splitId(), initializedState(s))));
+                                s.splitId(),
+                                new SplitContext<>(s.splitId(), initializedState(s), rateLimiter)));
         // Hand over the splits to the split fetcher to start fetch.
         splitFetcherManager.addSplits(splits);
     }
@@ -356,11 +404,14 @@ public abstract class SourceReaderBase<E, T, SplitT extends SourceSplit, SplitSt
 
         final String splitId;
         final SplitStateT state;
+        @Nullable final RateLimiter rateLimiter;
+
         @Nullable SourceOutput<T> sourceOutput;
 
-        private SplitContext(String splitId, SplitStateT state) {
+        private SplitContext(String splitId, SplitStateT state, @Nullable RateLimiter rateLimiter) {
             this.state = state;
             this.splitId = splitId;
+            this.rateLimiter = rateLimiter;
         }
 
         SourceOutput<T> getOrCreateSplitOutput(
@@ -374,7 +425,67 @@ public abstract class SourceReaderBase<E, T, SplitT extends SourceSplit, SplitSt
                     sourceOutput = new SourceOutputWrapper<>(sourceOutput, eofRecordHandler);
                 }
             }
+            if (rateLimiter != null) {
+                sourceOutput = new RateLimitedSourceOutputWrapper<>(sourceOutput, rateLimiter);
+            }
             return sourceOutput;
+        }
+    }
+
+    /** This output calculated the amount of record emitted. */
+    private static final class RateLimitedSourceOutputWrapper<T> implements SourceOutput<T> {
+        final SourceOutput<T> sourceOutput;
+
+        final RateLimiter rateLimiter;
+
+        int recordCount;
+
+        public RateLimitedSourceOutputWrapper(
+                SourceOutput<T> sourceOutput, RateLimiter rateLimiter) {
+            this.sourceOutput = sourceOutput;
+            this.rateLimiter = rateLimiter;
+            this.recordCount = 0;
+        }
+
+        @Override
+        public void emitWatermark(Watermark watermark) {
+            sourceOutput.emitWatermark(watermark);
+        }
+
+        @Override
+        public void markIdle() {
+            sourceOutput.markIdle();
+        }
+
+        @Override
+        public void markActive() {
+            sourceOutput.markActive();
+        }
+
+        @Override
+        public void collect(T record) {
+            sourceOutput.collect(record);
+            recordCount++;
+        }
+
+        @Override
+        public void collect(T record, long timestamp) {
+            sourceOutput.collect(record, timestamp);
+            recordCount++;
+        }
+
+        /**
+         * Gets the number of records emitted.
+         *
+         * @return the number of records emitted.
+         */
+        public int getRecordCount() {
+            return recordCount;
+        }
+
+        /** Resets the record count to 0. */
+        public void resetRecordCount() {
+            recordCount = 0;
         }
     }
 

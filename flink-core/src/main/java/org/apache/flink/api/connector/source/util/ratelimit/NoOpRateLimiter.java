@@ -28,7 +28,7 @@ import java.util.concurrent.CompletionStage;
 public class NoOpRateLimiter implements RateLimiter {
 
     @Override
-    public CompletionStage<Void> acquire() {
+    public CompletionStage<Void> acquire(int requestSize) {
         return FutureUtils.completedVoidFuture();
     }
 }

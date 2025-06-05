@@ -80,7 +80,7 @@ public class RateLimitedSourceReader<E, SplitT extends SourceSplit>
         if (availabilityFuture == null) {
             availabilityFuture =
                     rateLimiter
-                            .acquire()
+                            .acquire(1)
                             .toCompletableFuture()
                             .thenCombine(sourceReader.isAvailable(), (l, r) -> null);
         }

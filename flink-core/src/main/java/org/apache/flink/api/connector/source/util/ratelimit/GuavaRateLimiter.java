@@ -42,7 +42,7 @@ public class GuavaRateLimiter
     }
 
     @Override
-    public CompletionStage<Void> acquire() {
-        return CompletableFuture.runAsync(rateLimiter::acquire, limiter);
+    public CompletionStage<Void> acquire(int requestSize) {
+        return CompletableFuture.runAsync(() -> rateLimiter.acquire(requestSize), limiter);
     }
 }

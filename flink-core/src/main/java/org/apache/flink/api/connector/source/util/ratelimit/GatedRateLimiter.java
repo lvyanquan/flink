@@ -50,19 +50,18 @@ public class GatedRateLimiter implements RateLimiter {
     transient CompletableFuture<Void> gatingFuture = null;
 
     @Override
-    public CompletionStage<Void> acquire() {
+    public CompletionStage<Void> acquire(int requestSize) {
         if (gatingFuture == null) {
             gatingFuture = CompletableFuture.completedFuture(null);
         }
         if (capacityLeft <= 0) {
             gatingFuture = new CompletableFuture<>();
         }
-        return gatingFuture.thenRun(() -> capacityLeft -= 1);
+        return gatingFuture.thenRun(() -> capacityLeft -= requestSize);
     }
 
     @Override
     public void notifyCheckpointComplete(long checkpointId) {
         capacityLeft = capacityPerCycle;
-        gatingFuture.complete(null);
     }
 }
